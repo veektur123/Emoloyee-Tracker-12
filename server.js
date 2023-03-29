@@ -1,5 +1,6 @@
 const inquirer = require('inquirer');
 const mysql = require('mysql2');
+const cTable = require('console.table');
 
 const db = mysql.createConnection(
     {
@@ -27,28 +28,28 @@ const initialPrompt = async () => {
     let {initialAnswer} = await inquirer.prompt(initialQuestion); console.log(initialAnswer)
     switch (initialAnswer) {
         case "Update Employee Role":
-            //Invoke update employee role function
+            updateEmployee()
             break;
         case "View All Roles":
-            //Invoke view all roles function
+            viewAllRoles()
             break;
         case "Add Role":
             addRole()
             break;
         case "View All Departments":
-            //Invoke view all departments function
+            viewAllDepartments()
             break;
         case "Add Department": 
         addDepartment()
             break;
         case "View All Employees":
-            //Invoke view all employees function
+            viewAllEmployees()
             break;
         case "Add An Employee":
         addEmployee()
             break;
         case "Quit":
-            //Invoke quit function
+            quit()
             break;
         default:
             return;
@@ -230,4 +231,144 @@ const addRole = async () => {
             );  
         }
     })
+}
+
+const viewAllRoles = async () => { 
+    db.query('SELECT * FROM role', async (err, roleRows) => {
+        if (err) {
+            console.log("Error retrieving roles.")  
+            console.log(err)  
+        }
+        else {
+            if(!roleRows.length) {
+                console.log('No role found. Add one before adding a employee.')
+                return initialPrompt()
+            }
+            const roleNames = roleRows.map(role => {
+               return {Roles: role.name}
+            })  
+            console.table(roleNames)
+            initialPrompt()
+        }
+     })
+}
+
+const viewAllDepartments = async () => { 
+    db.query('SELECT * FROM department', async (err, departmentRows) => {
+        if (err) {
+            console.log("Error retrieving departments.")  
+            console.log(err)  
+        }
+        else {
+            if(!departmentRows.length) {
+                console.log('No department found.')
+                return initialPrompt()
+            }
+            const departmentNames = departmentRows.map(department => {
+               return {Departments: department.name}
+            })  
+            console.table(departmentNames)
+            initialPrompt()
+        }
+     })
+}
+
+const viewAllEmployees = async () => { 
+    db.query('SELECT * FROM employee', async (err, employeeRows) => {
+        if (err) {
+            console.log("Error retrieving employees.")  
+            console.log(err)  
+        }
+        else {
+            if(!employeeRows.length) {
+                console.log('No employee found.')
+                return initialPrompt()
+            }
+            const employeeNames = employeeRows.map(employee => {
+               return {Employees: `${employee.first_name} ${employee.last_name}`}
+            })  
+            console.table(employeeNames)
+            initialPrompt()
+        }
+     })
+}
+
+const updateEmployee = async () => {
+    db.query('SELECT * FROM role', async (err, roleRows) => {
+        if (err) {
+            console.log("Error retrieving roles.")  
+            console.log(err)  
+        }
+        else {
+            if(!roleRows.length) {
+                console.log('No role found. Add one before adding a employee.')
+                return initialPrompt()
+            }
+            const roleNames = roleRows.map(role => role.name)
+
+            db.query('SELECT * from employee;', async (employeeErr, employeeRows) => {
+                if (employeeErr) {
+                    console.log("Error retrieving employees.")  
+                    console.log(employeeErr)  
+                } else {
+                    if(!roleRows.length) {
+                        console.log('No role found. Add one before adding a employee.')
+                        return initialPrompt()
+                    } else if (!employeeRows.length) {
+                        console.log('No employees found. Add one before updating an employee.')
+                        return initialPrompt()
+                    } else {
+                        const employeeNames = employeeRows.map(employee => `${employee.first_name} ${employee.last_name}`)
+
+                        const employeeChoiceQuestion = [
+                            {
+                               type: 'list',
+                               name: 'employeeName',
+                               message: `Which employee would you like to update?`,
+                               choices: employeeNames
+                            }
+                        ]
+
+                        const {employeeName} = await inquirer.prompt(employeeChoiceQuestion)
+                        const [firstName, lastName] = employeeName.split(' ')
+                        const managerNames = employeeNames.filter(employee => employee.first_name !== firstName && employee.last_name !== lastName)
+
+                        const {id: employeeId} = employeeRows.find(employee => employee.first_name === firstName && employee.last_name === lastName)
+
+                        const employeeQuestion = [
+                            {
+                                type: 'list',
+                                name: 'employeeRoleName',
+                                message: 'What is this employees new role?', 
+                                choices: roleNames
+                            },
+                        ]
+
+                        let {employeeRoleName,} = await inquirer.prompt(employeeQuestion);
+                        const foundRole = roleRows.find(role => role.name === employeeRoleName)
+                        const roleId = foundRole.id
+
+                        db.query(
+                            `UPDATE employee role_id SET ('${roleId}') WHERE id = ('${employeeId}');`,
+                           function(err,) {
+                               if (err) {
+                                   console.log("Error updating role.")  
+                                   console.log(err)  
+                               }
+                               else {
+                                   console.log("Successfully updated role.")
+                               }
+                               initialPrompt()
+                           } 
+                       )
+                    }
+                }
+            })
+        }
+    })
+}
+
+const quit = () => {
+    console.log("The application has been closed.")
+    process.exit()
 }
