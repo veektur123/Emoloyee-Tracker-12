@@ -207,7 +207,7 @@ const addRole = async () => {
                 {
                     type: 'list',
                     name: 'departmentName',
-                    message: 'What role is this role in?', 
+                    message: 'What department is this role in?', 
                     choices: departmentNames
                 }
             
@@ -349,7 +349,7 @@ const updateEmployee = async () => {
                         const roleId = foundRole.id
 
                         db.query(
-                            `UPDATE employee role_id SET ('${roleId}') WHERE id = ('${employeeId}');`,
+                            `UPDATE employee SET role_id = '${roleId}' WHERE id = '${employeeId}';`,
                            function(err,) {
                                if (err) {
                                    console.log("Error updating role.")  
